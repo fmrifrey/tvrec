@@ -5,6 +5,8 @@ function [x_star, cost, x_set] = tvrec_nufft(klocs,kdata,N,fov,varargin)
 %
 % written by David Frey (djfrey@umich.edu) and Tao Hong (tahong@umich.edu)
 %
+% if no inputs are passed, test case (written at bottom of code) will run
+%
 % inputs:
 %     klocs         kspace sampling locations; size() = [Nk, Nt, Nd]
 %     kdata         kspace data at sampling locs; size() = [Nk, Nc, Nt]
@@ -33,6 +35,12 @@ function [x_star, cost, x_set] = tvrec_nufft(klocs,kdata,N,fov,varargin)
 %      x_set        set of images at each iteration; size() = {niter,1};
 %
 
+    % run test case if no inputs are passed
+    if nargin < 1
+        [x_star, cost, x_set] = test_tvrec_nufft;
+        return
+    end
+
     % define defaults
     defaults = struct( ...
         'lam', 0, ...
@@ -47,10 +55,6 @@ function [x_star, cost, x_set] = tvrec_nufft(klocs,kdata,N,fov,varargin)
 
     % parse arguments
     arg = vararg_pair(defaults,varargin);
-
-    % convert N and fov to row vectors
-    N = N(:)';
-    fov = fov(:)';
     
     % simulate data if none is passed
     if isempty(kdata)
@@ -60,7 +64,11 @@ function [x_star, cost, x_set] = tvrec_nufft(klocs,kdata,N,fov,varargin)
 
     % get number of time points
     Nt = size(klocs,2);
-    Nd = size(klocs,3);
+    Nd = length(N);
+    
+    % convert N and fov to row vectors
+    N = N(:)';
+    fov = fov(:)';
 
     % check SENSE map
     if isempty(arg.smap) && size(kdata,2)>1
@@ -72,8 +80,8 @@ function [x_star, cost, x_set] = tvrec_nufft(klocs,kdata,N,fov,varargin)
     F = cell(Nt,1);
     W = cell(Nt,1);
     nufft_args = {N, 6*ones(Nd,1), 2*N, N/2, 'table', 2^10, 'minmax:kb'};
-    parfor (n = 1:Nt, 100*arg.parallelize)
-        omega = 2*pi*fov./N.*squeeze(klocs(:,n,:));
+    for n = 1:Nt % parfor (n = 1:Nt, 100*arg.parallelize)
+        omega = 2*pi*fov./N.*squeeze(klocs(:,n,1:Nd));
         F{n} = Gnufft(true(N),cat(2,{omega},nufft_args)); % NUFFT
         W{n} = tvrec.pmdcf(F{n});
     end
@@ -90,11 +98,34 @@ function [x_star, cost, x_set] = tvrec_nufft(klocs,kdata,N,fov,varargin)
     end
 
     % recon the data
-    [x_star,cost,x_set] = tvrec.tvrecon(A,At,kdata, ...
+    [x_star,cost,x_set] = tvrec.tvdeblur(A,At,kdata, ...
         'lam', arg.lam, ...
         'L', arg.L, ...
         'type', arg.type, ...
         'niter', arg.niter, ...
         'show', arg.show);
+
+end
+
+function [x_star, cost, x_set] = test_tvrec_nufft()
+% test case for tvrec_nufft - radial undersampling
+    
+    % set parameters
+    N = [256,256];
+    fov = [24,24];
+    nspokes = 32;
+
+    % initialize radial sampling trajectory
+    klocs = zeros(N(1),nspokes,2);
+    spoke0 = [1;0;0]*N(1)/fov(1)/2.*linspace(-1,1,N(1));
+    for i = 1:nspokes
+        % transform initial spoke
+        spokei = eul2rotm((i-1)*pi/nspokes*[1,0,0])*spoke0;
+        klocs(:,i,:) = permute(spokei(1:2,:),[2,3,1]);
+    end
+    klocs = reshape(klocs,[],1,2); % combine spokes into 1 frame
+    
+    % run the reconstruction with simulated data
+    [x_star, cost, x_set] = tvrec_nufft(klocs,[],N,fov,'lam',0.1,'show',1);
 
 end
