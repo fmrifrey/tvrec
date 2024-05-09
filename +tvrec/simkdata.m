@@ -1,4 +1,25 @@
-function [kdata,smap,x_gt] = simpdata(klocs,N,fov,varargin)
+function [kdata,smap,x_gt] = simkdata(klocs,N,fov,varargin)
+% simkdata() simulates kspace data at sampling locations for digital
+%   ellipsoidal phantom data
+%
+% written by David Frey (djfrey@umich.edu) and Tao Hong (tahong@umich.edu)
+%
+% inputs:
+%     klocs         kspace sampling locations; size() = [Nk, Nt, Nd]
+%     N             image dimensions; size() = [Nd, 1]
+%     fov           field of view (in inverse units of klocs);
+%                       size() = [Nd, 1]
+%     'ncoils'      number of coils to simulate
+%     'snr'         signal to noise ratio for additive white gaussian
+%                       noise (dB)
+%     'show'        option to show the sampling (2d data only); (0 or 1)
+% 
+% outputs:
+%      kdata        kspace data at sampling locs; size() = [Nk, Nc, Nt]
+%      smap         simulated sensitivity maps; size() = [N(:)', Nc]
+%      x_gt         ground truth digital phantom image;
+%                       size() = [N(:)', Nt]
+%
 
     % define defaults
     defaults = struct( ...
@@ -47,7 +68,7 @@ function [kdata,smap,x_gt] = simpdata(klocs,N,fov,varargin)
     
     % NUFFT the object - inverse crime k-space signal estimation
     kdata = tvrec.A_fwd(x_gt,A,smap,0);
-    kdata = awgn(kdata,arg.snr);
+    kdata = awgn(kdata,arg.snr); % add white gaussin noise
     
     % create a figure showing k-space sampling pattern
     if arg.show && nd == 2

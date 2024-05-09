@@ -1,7 +1,31 @@
-function [x_star,cost,x_set] = tvrecon(A,At,b,varargin)
-% A = forward operator @(x) A*x
-% At = adjoint operator @(y) A'*y
-% b = data to reconstruct
+function [x_star,cost,x_set] = tvdeblur(A,At,b,varargin)
+% tvdeblur() solves the total variation deblurring problem described by
+%   equation 2.2 in Beck, Amir, and Marc Teboulle. “Fast Gradient-Based
+%   Algorithms for Constrained Total Variation Image Denoising and
+%   Deblurring Problems.”
+%
+% written by David Frey (djfrey@umich.edu) and Tao Hong (tahong@umich.edu)
+%
+% inputs:
+%      A            forward system operator (function handle)
+%      At           adjoint system operator (function handle)
+%      b            blurred data (i.e. kspace); (size should be consistent
+%                       with operators)
+%     'lam'         lagrange multiplier for TV regularization;
+%                       size() = [1,1]
+%     'L'           Lipschitz constant (leave empty for power iteration
+%                       estimation); size() = [1,1]
+%     'type'        type of total variation cost ('l1' or 'iso')
+%     'niter'       number of iterations; size() = [1,1]
+%     'show'        option to show the reconstruction as it iterates
+%                       (0 or 1)
+% 
+% outputs:
+%      x_star       final iteration estimate image; size() = [N(:)', Nt]
+%      cost         vector containing cost at each iteration;
+%                       size() = [niter, 1]
+%      x_set        set of images at each iteration; size() = {niter,1};
+%
 
     % define defaults
     defaults = struct( ...

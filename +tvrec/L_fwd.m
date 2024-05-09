@@ -1,5 +1,17 @@
 function x = L_fwd(P)
-% P = cell array of projection matrices for each dimension
+% L_fwd() computes the forward operation x = L*P as described in section 4
+%   of Beck, Amir, and Marc Teboulle. “Fast Gradient-Based Algorithms for
+%   Constrained Total Variation Image Denoising and Deblurring Problems.”
+%
+% written by David Frey (djfrey@umich.edu) and Tao Hong (tahong@umich.edu)
+%
+% inputs:
+%     P             matrix set {p,q,...} of difference matrices along each
+%                       dimension; size() = {ndims(x),1}%
+% outputs:
+%     x             matrix of any size
+%               
+%
     
     % get size
     sz = size(P{1});

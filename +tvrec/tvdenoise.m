@@ -1,9 +1,24 @@
 function [Y,P] = tvdenoise(v,lam,P,type,niter)
-% v = noisey image
-% lam = lagrange multiplier
-% P = cell array of projection operators {Nd x 1}
-% type = type of tv semi-norm ('iso' or 'l1')
-% niter = max number of iterations
+% tvdenoise() solves the total variation denoising problem described in
+%   equation 4.1 of Beck, Amir, and Marc Teboulle. “Fast Gradient-Based
+%   Algorithms for Constrained Total Variation Image Denoising and
+%   Deblurring Problems.”
+%
+% written by David Frey (djfrey@umich.edu) and Tao Hong (tahong@umich.edu)
+%
+% inputs:
+%     v         noisey image matrix; size() = [N(:)', Nt]
+%     lam       lagrange multiplier for TV regularizer
+%     P         cell array of difference matrices (leave empty for first
+%                   iteration, use output for next iteration)
+%     type      type of total variation cost ('l1' or 'iso')
+%     niter     number of iterations to perform
+%
+% outputs:
+%     Y         denoised image (same size as x)
+%     P         cell array of difference matrices (use as input for next
+%                   iteration)
+%
 
     % get size
     sz = size(v);

@@ -1,5 +1,17 @@
 function P = L_adj(x)
-% x = image of any dimensions
+% L_adj() computes the adjoint operation P = L'x as described in section 4
+%   of Beck, Amir, and Marc Teboulle. “Fast Gradient-Based Algorithms for
+%   Constrained Total Variation Image Denoising and Deblurring Problems.”
+%
+% written by David Frey (djfrey@umich.edu) and Tao Hong (tahong@umich.edu)
+%
+% inputs:
+%     x             matrix of any size
+%                       
+% outputs:
+%     P             matrix set {p,q,...} of difference matrices along each
+%                       dimension; size() = {ndims(x),1}
+%
 
     % get size
     sz = size(x);
@@ -13,10 +25,6 @@ function P = L_adj(x)
     
     % loop through dimensions
     for d = 1:nd
-
-        % calculate L'(x) = {p,q}
-        % p_i,j = x_i,j - x_i+1,j
-        % q_i,j = x_i,j - x_i,j+1
         P{d} = -diff(x,1,d);
     end
 

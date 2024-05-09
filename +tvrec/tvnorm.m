@@ -1,6 +1,17 @@
 function tv = tvnorm(x,type)
-% x = image of any dimensions
-% type = type of tv semi-norm ('iso' or 'l1')
+% tvnorm() calculates the discrete total variation semi-norm, described by
+%   the equations following equation 2.2 in Beck, Amir, and Marc Teboulle.
+%   “Fast Gradient-Based Algorithms for Constrained Total Variation Image
+%   Denoising and Deblurring Problems.”
+%
+% written by David Frey (djfrey@umich.edu) and Tao Hong (tahong@umich.edu)
+%
+% input
+%     x     image matrix; size() = [N(:)', Nt]
+%     type  type of norm ('l1' or 'iso')
+% outputs:
+%     tv    value of discrete total variation semi-norm
+%
 
     % set default type
     if nargin < 2 || isempty(type)

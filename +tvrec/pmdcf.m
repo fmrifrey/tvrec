@@ -1,8 +1,20 @@
 function [W,w] = pmdcf(F,itrmax)
-% pipe-menon density compensation function
-% F = NUFFT operator
-% itrmax = number of iterations
+% pmdcf() computes the density compensation weighting matrix W for a given
+%   NUFFT fatrix object using the methods described in Pipe, James G., and
+%   Padmanabhan Menon. “Sampling Density Compensation in MRI: Rationale and
+%   an Iterative Numerical Solution”.
+%
+% written by David Frey (djfrey@umich.edu)
+%
+% inputs:
+%      F            NUFFT fatrix (Gnufft or Gmr object from MIRT)
+%      itrmax       number of iterations to perform
+% outputs:
+%      W            density weighting fatrix
+%      w            sample desnity weights
+%
 
+    % set default itrmax
     if nargin < 2 || isempty(itrmax)
         itrmax = 15;
     end

@@ -1,8 +1,22 @@
 function b = A_fwd(x,F,smap,parallelize)
-% x = image {[N x N] x Nt}
-% F = NUFFT operators {[Nk x N^2] x Nt}
-% smap = sensitivity map [N x N]
-% parallelize = option to parallelize the frame loop (0 or 1)
+% A_adj() computes the forward operation: b = A(x) for NUFFT-SENSE
+%   reconstruction
+%
+% written by David Frey (djfrey@umich.edu) and Tao Hong (tahong@umich.edu)
+%
+% inputs:
+%     b             kspace data; size() = [Nk, Nt, Nd]
+%     F             cell array of system matrices for each time point
+%                       (should not include density compensation or
+%                       sensitvity encoding); size() = {Nt, 1}
+%     smap          sensitivity maps, leave empty for no sensitivity
+%                       encoding; size() = [N(:)', Nc]
+%     paralellize   option to run frame-wise reconstructions in parallel
+%                       (0 or 1)
+% 
+% outputs:
+%      x            image space data; size() = [N(:)', Nt]
+%
     
     % set default parallelize
     if nargin < 4 || isempty(parallelize)

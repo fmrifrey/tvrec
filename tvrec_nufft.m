@@ -1,19 +1,48 @@
 function [x_star, cost, x_set] = tvrec_nufft(klocs,kdata,N,fov,varargin)
-% klocs = kspace sampling locations [Nk x Nt x Nd]
-% kdata = kspace data at sampling locs [Nk x Nc x Nt]
-% N = image dimensions [Nd x 1]
-% fov = field of view (inverse units of klocs), [Nd x 1]
+% tvrec_nufft() reconstructs image x given kspace sampling locations and
+%   corresponding kspace data using total variation regularized iterative
+%   SENSE reconstruction
+%
+% written by David Frey (djfrey@umich.edu) and Tao Hong (tahong@umich.edu)
+%
+% inputs:
+%     klocs         kspace sampling locations; size() = [Nk, Nt, Nd]
+%     kdata         kspace data at sampling locs; size() = [Nk, Nc, Nt]
+%     N             image dimensions; size() = [Nd, 1]
+%     fov           field of view (in inverse units of klocs);
+%                       size() = [Nd, 1]
+%     'lam'         lagrange multiplier for TV regularization;
+%                       size() = [1,1]
+%     'L'           Lipschitz constant (leave empty for power iteration
+%                       estimation); size() = [1,1]
+%     'type'        type of total variation cost ('l1' or 'iso')
+%     'niter'       number of iterations; size() = [1,1]
+%     'smap'        sensitivity maps, leave empty to coil compress;
+%                       size() = [N(:)', Nc]
+%     'paralellize' option to run frame-wise reconstructions in parallel
+%                       (0 or 1)
+%     'denscomp'    option to weigh kspace points by sampling density using
+%                       pipe & menon dcf (0 or 1)
+%     'show'        option to show the reconstruction as it iterates
+%                       (0 or 1)
+% 
+% outputs:
+%      x_star       final iteration estimate image; size() = [N(:)', Nt]
+%      cost         vector containing cost at each iteration;
+%                       size() = [niter, 1]
+%      x_set        set of images at each iteration; size() = {niter,1};
+%
 
     % define defaults
     defaults = struct( ...
-        'lam', 0, ... % lagrange multiplier for TV
-        'L', [], ... % Lipschitz constant
-        'type', 'l1', ... % TV semi-norm type
-        'niter', 100, ... % number of iterations
-        'smap', [], ... % sensitivity map [N x Nc]
-        'parallelize', 0, ... % option to parallelize frame-wise recons
-        'denscomp', 1, ... % option to perform sampling density compensation
-        'show', 0 ... % show iterations of the recon as it happens
+        'lam', 0, ...
+        'L', [], ...
+        'type', 'l1', ...
+        'niter', 100, ...
+        'smap', [], ...
+        'parallelize', 0, ...
+        'denscomp', 1, ...
+        'show', 0 ...
         );
 
     % parse arguments
@@ -26,7 +55,7 @@ function [x_star, cost, x_set] = tvrec_nufft(klocs,kdata,N,fov,varargin)
     % simulate data if none is passed
     if isempty(kdata)
         warning('no data passed, creating phantom simulation...');
-        [kdata,arg.smap] = tvrec.tools.simpdata(klocs,N,fov,'show',arg.show);
+        [kdata,arg.smap] = tvrec.simkdata(klocs,N,fov,'show',arg.show);
     end
 
     % get number of time points

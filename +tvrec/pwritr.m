@@ -1,12 +1,22 @@
 function L = pwritr(A,At,sz,tol)
-% A = forward operator @(x) A*x
-% At = adjoint operator @(y) A'*y
-% sz = size of input image [Nd x 1]
-% tol = tolerance
+% pwritr() estimates the Lipschitz constant, L for a given system operator
+%   A using the power iteration method
+%
+% written by David Frey (djfrey@umich.edu) and Tao Hong (tahong@umich.edu)
+%
+% inputs:
+%      A            forward system operator (function handle)
+%      At           adjoint system operator (function handle)
+%      sz           size of the input image; size() = [nd,1]
+%      tol          convergence tolerance (percent error)
+%
+% outputs:
+%      L            estimated Lipschitz constant
+%
 
     % set default tolerance
     if nargin < 4 || isempty(tol)
-        tol = 1e-2;
+        tol = 1; % 1% error
     end
 
     % initialize
@@ -23,7 +33,7 @@ function L = pwritr(A,At,sz,tol)
         norm_b_k_1 = norm(Ab_k(:),'fro');
         
         % check for convergence
-        if norm(b_k_1(:)-b_k(:),'fro')/norm(b_k(:),'fro') <= tol
+        if 100*norm(b_k_1(:)-b_k(:),'fro')/norm(b_k(:),'fro') <= tol
             break
         else
             norm_b_k = norm_b_k_1;
