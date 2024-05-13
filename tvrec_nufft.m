@@ -1,4 +1,4 @@
-function [x_star, cost, x_set] = tvrec_nufft(klocs,kdata,N,fov,varargin)
+function [x_star, cost, x_set, L] = tvrec_nufft(klocs,kdata,N,fov,varargin)
 % tvrec_nufft() reconstructs image x given kspace sampling locations and
 %   corresponding kspace data using total variation regularized iterative
 %   SENSE reconstruction
@@ -9,7 +9,7 @@ function [x_star, cost, x_set] = tvrec_nufft(klocs,kdata,N,fov,varargin)
 %
 % inputs:
 %     klocs         kspace sampling locations; size() = [Nk, Nt, Nd]
-%     kdata         kspace data at sampling locs; size() = [Nk, Nc, Nt]
+%     kdata         kspace data at sampling locs; size() = [Nk, Nt, Nc]
 %     N             image dimensions; size() = [Nd, 1]
 %     fov           field of view (in inverse units of klocs);
 %                       size() = [Nd, 1]
@@ -33,6 +33,7 @@ function [x_star, cost, x_set] = tvrec_nufft(klocs,kdata,N,fov,varargin)
 %      cost         vector containing cost at each iteration;
 %                       size() = [niter, 1]
 %      x_set        set of images at each iteration; size() = {niter,1};
+%      L            Lipschitz constant (for recycling)
 %
 
     % run test case if no inputs are passed
@@ -62,37 +63,44 @@ function [x_star, cost, x_set] = tvrec_nufft(klocs,kdata,N,fov,varargin)
         [kdata,arg.smap] = tvrec.simkdata(klocs,N,fov,'show',arg.show);
     end
 
-    % get number of time points
+    % get sizes
     Nt = size(klocs,2);
     Nd = length(N);
+    Nc = size(kdata,3);
     
     % convert N and fov to row vectors
     N = N(:)';
     fov = fov(:)';
 
     % check SENSE map
-    if isempty(arg.smap) && size(kdata,2)>1
+    if isempty(arg.smap) && Nc > 1
         warning('sense map is empty, compressing data to 1 coil...');
         kdata = ir_mri_coil_compress(kdata,'ncoil',1);
+        Nc = 1;
     end
-
+    
     % create a cell array of forward NUFFT operators for each time pt
     F = cell(Nt,1);
-    W = cell(Nt,1);
+    w = cell(Nt,1);
     nufft_args = {N, 6*ones(Nd,1), 2*N, N/2, 'table', 2^10, 'minmax:kb'};
-    for n = 1:Nt % parfor (n = 1:Nt, 100*arg.parallelize)
+    
+    % create nufft matrices for each frame
+    parfor (n = 1:Nt, 100*arg.parallelize)
         omega = 2*pi*fov./N.*squeeze(klocs(:,n,1:Nd));
         F{n} = Gnufft(true(N),cat(2,{omega},nufft_args)); % NUFFT
-        W{n} = tvrec.pmdcf(F{n});
+        [~,w{n}] = tvrec.pmdcf(F{n}); % density compensation
+        if Nc > 1 % sensitivity encoding
+            F{n} = Asense(F{n},arg.smap);
+        end
     end
     
     % define the forward and adjoint operators A and At
-    A = @(x) tvrec.A_fwd(x,F,arg.smap,arg.parallelize);
-    At = @(b) tvrec.A_adj(b,F,W,arg.smap,arg.parallelize);
+    A = @(x) tvrec.A_fwd(x,F,Nc,arg.parallelize);
+    At = @(b) tvrec.A_adj(b,F,w,arg.parallelize);
 
     % calculate default L using power iteration
     if isempty(arg.L) && arg.niter > 0
-        arg.L = tvrec.pwritr(A,At,N);
+        arg.L = tvrec.pwritr(A,At,[N(:)',Nt]);
     elseif isempty(arg.L)
         arg.L = 0;
     end
@@ -104,6 +112,9 @@ function [x_star, cost, x_set] = tvrec_nufft(klocs,kdata,N,fov,varargin)
         'type', arg.type, ...
         'niter', arg.niter, ...
         'show', arg.show);
+    
+    % return L
+    L = arg.L;
 
 end
 

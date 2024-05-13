@@ -15,7 +15,7 @@ function [kdata,smap,x_gt] = simkdata(klocs,N,fov,varargin)
 %     'show'        option to show the sampling (2d data only); (0 or 1)
 % 
 % outputs:
-%      kdata        kspace data at sampling locs; size() = [Nk, Nc, Nt]
+%      kdata        kspace data at sampling locs; size() = [Nk, Nt, Nc]
 %      smap         simulated sensitivity maps; size() = [N(:)', Nc]
 %      x_gt         ground truth digital phantom image;
 %                       size() = [N(:)', Nt]
@@ -64,10 +64,16 @@ function [kdata,smap,x_gt] = simkdata(klocs,N,fov,varargin)
         nufft_args = {N, 6*ones(1,nd), 2*N, N/2, ...
             'table', 2^10, 'minmax:kb'};
         A{i} = Gnufft(true(N),cat(2,{omega},nufft_args)); % NUFFT
+        if i==1
+            A1 = A{i};
+        end
+        if arg.ncoils > 1
+            A{i} = Asense(A{i},smap);
+        end
     end
     
     % NUFFT the object - inverse crime k-space signal estimation
-    kdata = tvrec.A_fwd(x_gt,A,smap,0);
+    kdata = tvrec.A_fwd(x_gt,A,0);
     kdata = awgn(kdata,arg.snr); % add white gaussin noise
     
     % create a figure showing k-space sampling pattern
@@ -75,15 +81,17 @@ function [kdata,smap,x_gt] = simkdata(klocs,N,fov,varargin)
         tvrec.tools.cfigopen('simpdata(): k-space sampling')
         
         subplot(1,3,1)
-        [x_grid,y_grid] = tvrec.tools.imgrid(fov,N);
-        imagesc(x_grid(:),y_grid(:),abs(x_gt));
+        xx = fov(1)*linspace(-0.5,0.5,N(1));
+        yy = fov(2)*linspace(-0.5,0.5,N(2));
+        im(xx,yy,abs(x_gt));
         xlabel('x (cm)');
         ylabel('y (cm)');
         title('ground truth')
+        colormap parula
         
         subplot(1,3,2)
         for i = 1:size(klocs,2)
-            kdata2 = reshape(kdata,size(klocs,1),size(klocs,2),[]);
+            kdata2 = reshape(kdata(:,:,1),size(klocs,1),size(klocs,2),[]);
             col = mean(abs(kdata2(:,i,:)),3)./max(abs(kdata2(:,i,:)),[],'all');
             x = klocs(:,i,1)';
             y = klocs(:,i,2)';
@@ -104,11 +112,12 @@ function [kdata,smap,x_gt] = simkdata(klocs,N,fov,varargin)
         title('k-space sampling');
         
         subplot(1,3,3)
-        imagesc(x_grid(:),y_grid(:), ...
-            abs(tvrec.A_adj(kdata,A(1),{tvrec.pmdcf(A{1})},smap,0)) );
+        [~,tmpw] = tvrec.pmdcf(A1);
+        im(xx,yy,abs(tvrec.A_adj(kdata,A(1),{tmpw},0)));
         title("A'y reconstruction");
         xlabel('x (cm)');
         ylabel('y (cm)');
+        colormap parula
         
         drawnow
     elseif arg.show

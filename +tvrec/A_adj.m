@@ -1,18 +1,16 @@
-function x = A_adj(b,F,W,smap,parallelize)
+function x = A_adj(b,F,w,parallelize)
 % A_adj() computes the adjoint operation: x = A'(b) for NUFFT-SENSE
 %   reconstruction
 %
 % written by David Frey (djfrey@umich.edu) and Tao Hong (tahong@umich.edu)
 %
 % inputs:
-%     b             kspace data; size() = [Nk, Nt, Nd]
+%     b             kspace data; size() = [Nk, Nt, Nc]
 %     F             cell array of system matrices for each time point
 %                       (should not include density compensation or
 %                       sensitvity encoding); size() = {Nt, 1}
-%     W             cell array of sampling weighting matrices for each time
+%     w             cell array of sampling weighting arrays for each time
 %                       point; size() = {Nt, 1}
-%     smap          sensitivity maps, leave empty for no sensitivity
-%                       encoding; size() = [N(:)', Nc]
 %     paralellize   option to run frame-wise reconstructions in parallel
 %                       (0 or 1)
 % 
@@ -33,11 +31,7 @@ function x = A_adj(b,F,W,smap,parallelize)
     
     parfor (n = 1:Nt, 100*parallelize) % loop through time points
         A = F{n};
-        A = W{n}*A; % density compensation
-        if ~isempty(smap)
-            A = Asense(A,smap); % sense
-        end
-        xn = A'*b(:,:,n); % calculate inverse NUFFT of ksignal at time point n
+        xn = A'*squeeze(w{n}.*b(:,n,:)); % calculate inverse NUFFT of ksignal at time point n
         x(:,n) = reshape(xn,[],1);
     end
     x = reshape(x,[F{1}.idim,Nt]);
